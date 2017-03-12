@@ -1,0 +1,14 @@
+version: '2'
+services:
+  nh1:
+    image: nethealth
+    environment:
+        - ENDPOINTS=nh2,nh3
+  nh2:
+    image: nethealth
+    environment:
+        - ENDPOINTS=nh1,nh3
+  nh3:
+    image: nethealth
+    environment:
+        - ENDPOINTS=nh1,nh2
