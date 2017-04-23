@@ -1,5 +1,5 @@
 {
-    "memo": "4b49a5ad5d769181df850cb08927db39419bdd5479fd052eec33a74f20b41578",
+    "memo": "11877a8590abd0a663280a94fea746df096048a4f7b9574d8f29eff083ec6157",
     "projects": [
         {
             "name": "cloud.google.com/go",
@@ -35,6 +35,14 @@
             ]
         },
         {
+            "name": "github.com/cactus/go-statsd-client",
+            "version": "v3.1.0",
+            "revision": "91c326c3f7bd20f0226d3d1c289dd9f8ce28d33d",
+            "packages": [
+                "statsd"
+            ]
+        },
+        {
             "name": "github.com/coreos/go-oidc",
             "branch": "master",
             "revision": "be73733bb8cc830d0205609b95d125215f8e9c70",
@@ -49,7 +57,7 @@
         {
             "name": "github.com/coreos/pkg",
             "version": "v3",
-            "revision": "3ac0863d7acf3bc44daf49afef8919af12f704ef",
+            "revision": "831ef4f966381d7c274006955589030568234d99",
             "packages": [
                 "health",
                 "httputil",
@@ -183,7 +191,7 @@
         {
             "name": "github.com/jonboulle/clockwork",
             "version": "v0.1.0",
-            "revision": "2eee05ed794112d45db504eb05aa693efd2b8b09",
+            "revision": "e6ec3ec5da5cce15fff8966d365c17f6d01b61a9",
             "packages": [
                 "."
             ]
@@ -256,7 +264,7 @@
         {
             "name": "golang.org/x/oauth2",
             "branch": "master",
-            "revision": "7fdf09982454086d5570c7db3e11f360194830ca",
+            "revision": "a6bd8cefa1811bd24b86f8902872e4e8225f74c4",
             "packages": [
                 ".",
                 "google",
@@ -309,8 +317,8 @@
         },
         {
             "name": "google.golang.org/grpc",
-            "version": "v1.2.0",
-            "revision": "cdee119ee21e61eef7093a41ba148fa83585e143",
+            "version": "v1.2.1",
+            "revision": "8050b9cbc271307e5a716a9d782803d09b0d6f2d",
             "packages": [
                 ".",
                 "codes",
