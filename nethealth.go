@@ -1,70 +1,30 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"flag"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
+//	"k8s.io/client-go/kubernetes"
+//	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
-type endpoint struct {
-	address string
-	ok      bool
-	failed  int
-}
-
 var (
-	l         *log.Logger
-	endpoints []endpoint
+	endpoints []string
 	peername  string
 	debug     bool          = true
 	port      int           = 3333
 	exiting   bool          = false
-	timeout   time.Duration = 100 * time.Millisecond
-	sleepTime time.Duration = 1 * time.Second
-	maxFailed int           = 3 // Number of times for a endpoint to fail to consider it down
 )
 
-// Read a received connection. The protocol is just read a peername
-// from the connection and write our own peername (useful for debugging)
-func handleRequest(conn net.Conn) {
-	defer conn.Close()
-	buf := make([]byte, 256)
-
-	_, err := conn.Read(buf)
-	if err != nil {
-		fmt.Println("Error reading:", err.Error())
-	} else {
-		//		fmt.Println("Received message from", string(buf))
-		conn.Write([]byte(peername))
-	}
-}
-
-func checkEndpoints() {
-	buf := make([]byte, 256)
-	for ; !exiting; time.Sleep(sleepTime) {
-		for _, e := range endpoints {
-			start := time.Now()
-			conn, err := net.DialTimeout("tcp", e.address, timeout)
-			if err != nil {
-				fmt.Println("Error connecting", e.address, err.Error())
-				continue
-			}
-			elapsed := time.Since(start)
-			//conn.SetDeadline(timeout)
-			conn.Write([]byte(peername))
-			conn.Read(buf)
-			fmt.Printf("Correctly connected to %s(%v) in %v\n", string(buf), e.address, elapsed)
-			conn.Close()
-		}
-	}
-}
-
 func abort(a ...interface{}) {
-	l.Println(a...)
+	glog.Fatalln(a...)
 	os.Exit(1)
 }
 
@@ -79,48 +39,74 @@ func readConfig() {
 
 	hostname, err := os.Hostname()
 	peername = readValue("PEERNAME", hostname)
+
 	debug = readValue("DEBUG", "0") == "1"
 	port, err = strconv.Atoi(readValue("PORT", "3333"))
 	if err != nil {
-		abort("Missing port config. Error:", err.Error())
+		abort("Error reading port config:", err.Error())
 	}
 
 	// Read a comma separated list of endpoints
+	// e.g. peer1:port1,peer2:port2 ...
 	ep := readValue("ENDPOINTS", "")
 	if ep != "" {
 		for _, e := range strings.Split(ep, ",") {
-			if ! strings.Contains(e, ":") {
-				// Add default port
+			if !strings.Contains(e, ":") {
+				// Add default port if missing from the endpoint
 				e = net.JoinHostPort(e, "3333")
 			}
-			l.Println("Adding endpoint", e)
-			endpoints = append(endpoints, endpoint{e, true, 0})
+			glog.Infoln("Adding endpoint", e)
+			endpoints = append(endpoints, e)
 		}
 	}
 }
 
+func buildConfig(kubeconfig string) (*rest.Config, error) {
+	if kubeconfig != "" {
+		return clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
+	return rest.InClusterConfig()
+}
+
 func main() {
-	l = log.New(os.Stderr, "", 0)
+	flag.Parse()
+/*
+	kubeconfig := flag.String("kubeconfig", "./config", "absolute path to the kubeconfig file")
+
+	// Create the client config. Use kubeconfig if given, otherwise assume in-cluster.
+	config, err := buildConfig(*kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// TODO Automatically get the list of endpoints
+	// Right now this just list all the pods. We should filter them somehow to get
+	// nethealth entpoints
+	for {
+		pods, err := clientset.CoreV1().Pods("").List(v1.ListOptions{})
+		if err != nil {
+			panic(err.Error())
+		}
+		glog.Infof("There are %d pods in the cluster\n", len(pods.Items))
+		for _, pod := range pods.Items {
+			glog.Infof("Pod %s @ %s\n", pod.Name, pod.Status.PodIP)
+		}
+		time.Sleep(10 * time.Second)
+	}
+*/
 	readConfig()
 
-	// Listen for incoming connections
-	laddr := fmt.Sprintf(":%d", port)
-	server, err := net.Listen("tcp", laddr)
-	if err != nil {
-		abort("Error starting server:", err.Error())
+	endpoint := Endpoint{name: peername, port: port}
+	endpoint.Start()
+	for _, e := range endpoints {
+		endpoint.AddPeer(e)
 	}
 
-	defer server.Close()
-	fmt.Println("Listening on", port)
-
-	go checkEndpoints()
-
-	for {
-		conn, err := server.Accept()
-		if err != nil {
-			l.Println("Error accepting", err.Error())
-		}
-
-		go handleRequest(conn)
-	}
+	time.Sleep(30 * time.Second )
+	endpoint.Stop()
 }
