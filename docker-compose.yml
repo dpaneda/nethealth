@@ -12,3 +12,7 @@ services:
     image: dpaneda/nethealth
     environment:
         - ENDPOINTS=nh1,nh2
+  statsd:
+    image: hopsoft/graphite-statsd
+    ports:
+      - "80:80"

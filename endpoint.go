@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/cactus/go-statsd-client/statsd"
 )
 
 type Endpoint struct {
@@ -17,7 +18,7 @@ type Endpoint struct {
 
 var (
 	timeout   time.Duration = 100 * time.Millisecond
-	sleepTime time.Duration = 1 * time.Second
+	sleepTime time.Duration = 5 * time.Second
 	maxFailed int           = 3 // Number of times for a Endpoint to fail to consider it down
 )
 
@@ -55,6 +56,12 @@ func (e *Endpoint) runServer() {
 
 func (e *Endpoint) checkEndpoints() {
 	buf := make([]byte, 256)
+	client, err := statsd.NewClient("statsd:8125", "")
+
+	if err != nil {
+		glog.Errorln("Error creating stats client", err.Error())
+	}
+
 	for ; !e.exiting; time.Sleep(sleepTime) {
 		for _, peer := range e.peers {
 			start := time.Now()
@@ -68,6 +75,8 @@ func (e *Endpoint) checkEndpoints() {
 			conn.Write([]byte(e.name))
 			conn.Read(buf)
 			glog.Infof("Correctly connected to %s(%v) in %v\n", string(buf), peer, elapsed)
+			stat_name := fmt.Sprintf("%s.%s", e.name, buf)
+			client.TimingDuration(stat_name, elapsed, 1.0)
 			conn.Close()
 		}
 	}
